@@ -1,0 +1,61 @@
+# The whole NanoBrain stack on a Jetson Orin Nano, for any Home Assistant to reach over the network.
+# `docker compose up -d` here, then add in Home Assistant:
+#   - Wyoming Protocol, host the Jetson, port 10300: speech to text.
+#   - Wyoming Protocol, host the Jetson, port 10200: text to speech.
+#   - Ollama, URL http://<jetson>:11434, model qwen3.5:4b: the conversation agent and the AI Task.
+# None of the three has authentication: keep these ports inside your network.
+name: nanobrain
+
+services:
+  # Speech to text on the GPU, built by this repository. Pin it by the digest its release gives.
+  wyoming-whisper-gpu:
+    image: ghcr.io/xoadev/nanobrain/wyoming-whisper-gpu:0.1.0
+    # int8_float16 keeps the int8 model in int8 on CUDA: without it, twice the memory.
+    command: ["--model", "small-int8", "--language", "en", "--compute-type", "int8_float16"]
+    volumes:
+      - whisper-models:/data
+    ports:
+      - "10300:10300"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Text to speech on the CPU: Piper is fast enough there, and the GPU stays for the other two.
+  wyoming-piper:
+    image: rhasspy/wyoming-piper:2.5.2@sha256:7d39aafac409c2b6b09d999ed04d84c311d632e558b35baa60fad6aac722af7a
+    command: ["--voice", "en_US-lessac-medium"]
+    volumes:
+      - piper-voices:/data
+    ports:
+      - "10200:10200"
+    restart: unless-stopped
+
+  # The language model, on the GPU. Upstream's image already carries the Jetson's CUDA libraries;
+  # it only has to be told the JetPack, which it cannot detect. Pull the model once:
+  # `docker compose exec ollama ollama pull qwen3.5:4b`.
+  ollama:
+    image: ollama/ollama:0.40.6@sha256:265409e1d931028a8f7d5a32bcbafddd7bffbc6cc629d77efe9560adf692a5e7
+    environment:
+      JETSON_JETPACK: "6"
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  whisper-models:
+  piper-voices:
+  ollama-models:

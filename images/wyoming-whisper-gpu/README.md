@@ -10,27 +10,8 @@ This image compiles CTranslate2 with CUDA for the Jetson and ships it on distrol
 
 ## Run it
 
-```yaml
-services:
-  wyoming-whisper-gpu:
-    image: ghcr.io/xoadev/nanobrain/wyoming-whisper-gpu:X.Y.Z@sha256:<digest>
-    command: ["--model", "small-int8", "--language", "en", "--compute-type", "int8_float16"]
-    volumes:
-      - whisper-models:/data
-    ports:
-      - "10300:10300"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-
-volumes:
-  whisper-models:
-```
+Its service in [`examples/compose.yaml`](../../examples/compose.yaml) is the whole setup: the
+image, the model arguments, a volume for the models and the GPU.
 
 Then, in Home Assistant, add the **Wyoming Protocol** integration with the Jetson's host and port
 `10300`, and pick it as the speech-to-text engine of your Assist pipeline.

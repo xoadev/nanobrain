@@ -56,7 +56,8 @@ writing the answer, and three things keep it down:
 
 ## How it will be measured
 
-On the Jetson, with Whisper loaded, so memory is what a house would have.
+On the Jetson, running [`examples/compose.yaml`](../examples/compose.yaml), so memory is what a
+house would have.
 
 **Accuracy**: [home-assistant-datasets](https://github.com/allenporter/home-assistant-datasets)
 (`docs/eval.md` there has the setup), run from a laptop against the Jetson's Ollama, with a model
@@ -80,8 +81,8 @@ pytest home_assistant_datasets/tool/assist/eval --model_output_dir=reports/assis
 ```
 
 **Latency of a real order**: the same run, read from Ollama's own log, which prints how long each
-request took: `docker logs ollama 2>&1 | grep 'POST "/api/chat"'`. The median and the slowest tenth
-are the two numbers that matter.
+request took: `docker compose logs ollama | grep 'POST "/api/chat"'`. The median and the slowest
+tenth are the two numbers that matter.
 
 **Seeing**: one camera snapshot through Ollama's API, with thinking off. Its answer carries
 `prompt_eval_duration` (reading the prompt and the image) and `eval_count` over `eval_duration`

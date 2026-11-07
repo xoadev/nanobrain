@@ -41,6 +41,11 @@ Each piece speaks a standard protocol, so any of them can be swapped without tou
 An image is built here only when no maintained one serves the Jetson. Ollama and Piper already
 publish theirs, so NanoBrain documents how to use them instead of rebuilding them.
 
+## Try it
+
+[`examples/compose.yaml`](examples/compose.yaml) runs the three pieces on the Jetson; its header
+says what to add in Home Assistant.
+
 ## Hardware
 
 A **Jetson Orin Nano Super**, with 8 GB shared by the CPU and the GPU, on **JetPack 6.2** (L4T
