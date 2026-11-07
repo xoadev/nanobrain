@@ -121,6 +121,28 @@ half. A model that spills to the CPU is no use for voice. On a Jetson shared wit
 a 4B multimodal model with an 8K context needs more memory than it has, so no Home Assistant orders
 or image questions were run.
 
+#### Where an Orin Nano's memory goes
+
+The containers on that Jetson added up to about 1.3 GB of RAM, yet only 4.4 GB of 7.6 were
+available. Read from `/proc/meminfo` and zram's `mm_stat` the same day, the rest was:
+
+| Item | MiB |
+| --- | --- |
+| Total the kernel manages (of 8 GB: firmware and boot reservations take the rest) | 7,619 |
+| Processes' memory (`AnonPages`) | 1,299 |
+| Page cache, buffers and swap cache | 876 |
+| **zram**: 2,096 MiB of swapped pages, compressed | **851** |
+| **CMA in use**: memory the GPU reserved, in no process's RSS | **230** |
+| Kernel: slab, vmalloc, page tables, stacks | 318 |
+| Not accounted for, likely more GPU allocations | ~172 |
+
+Two lessons for any Jetson:
+
+- **zram is not free.** JetPack swaps to compressed RAM by default. Idle services end up there, out
+  of every container's memory figure, and still cost about 0.4 MiB of RAM per MiB they swapped.
+- **The GPU's memory is the system's memory**, and no process lists it as its own. To see it, read
+  `tegrastats` or `/proc/meminfo`, not `docker stats`.
+
 ### On a Jetson running only NanoBrain
 
 | Measure | Qwen3.5 4B |
