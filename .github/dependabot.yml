@@ -1,0 +1,39 @@
+# Same wait as the rule for every dependency: nothing younger than a week. Its commits are
+# conventional (`fix(deps)`), so a new lock releases a patch of the image it touches.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: docker
+    directories:
+      - /images/*
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: fix
+      include: scope
+
+  - package-ecosystem: pip
+    directories:
+      - /images/*
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: fix
+      include: scope
+    ignore:
+      # av 19 dropped an argument faster-whisper 1.2.1 passes to av.open; 17 is the one tried since.
+      - dependency-name: av
+        versions: [">=18"]

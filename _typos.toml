@@ -1,0 +1,3 @@
+[files]
+# Locks: their hashes are not words.
+extend-exclude = ["*requirements.txt"]

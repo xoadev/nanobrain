@@ -1,0 +1,165 @@
+# Every push to main publishes each image that has changes to release: convco reads the conventional
+# commits that touched images/<image>/ and says its next X.Y.Z. The image goes to
+# ghcr.io/xoadev/nanobrain/<image>:X.Y.Z with a provenance attestation, and the release
+# <image>-vX.Y.Z carries its changelog and digest. No slash in the tag: a tag's name is also a path
+# in its download URLs.
+#
+# convco runs with a token that only reads and no credentials left on disk; the job that publishes
+# runs only make and gh on what convco said.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One at a time and never cancelled: two runs could compute the same version for the same image.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # The images there are: every folder under images/.
+  list:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      images: ${{ steps.list.outputs.images }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        run: |
+          images=$(find images -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rnc '[inputs]')
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+          echo "images: $images"
+
+  # Each image's next version and changes, handed over as a file: a matrix's jobs can't each set an
+  # output.
+  version:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.list.outputs.images) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # convco reads every commit since the image's last tag.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: version
+        uses: xoadev/convco-version@e8cf4f03b64bbbb8b2e10cecdab9c99ada457e9c # v1.1.0
+        with:
+          paths: images/${{ matrix.image }}
+          tag-prefix: ${{ matrix.image }}-v
+
+      - name: Write it down
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ steps.version.outputs.next-version-tag }}
+          VERSION: ${{ steps.version.outputs.next-version }}
+          HAS_CHANGES: ${{ steps.version.outputs.has-changes }}
+          CHANGELOG: ${{ steps.version.outputs.changelog }}
+        run: |
+          if [[ "$HAS_CHANGES" == true && "$TAG" != "$IMAGE-v$VERSION" ]]; then
+            echo "::error title=Version::convco said '$TAG' for $IMAGE, not $IMAGE-v$VERSION" >&2
+            exit 1
+          fi
+          mkdir -p "version/$IMAGE"
+          printf '%s' "$TAG" > "version/$IMAGE/tag"
+          printf '%s' "$VERSION" > "version/$IMAGE/version"
+          printf '%s' "$HAS_CHANGES" > "version/$IMAGE/has-changes"
+          printf '%s' "$CHANGELOG" > "version/$IMAGE/changelog"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: version-${{ matrix.image }}
+          path: version/
+          retention-days: 1
+
+  # Compiling CUDA needs nvcc, not a GPU: GitHub's arm64 runner builds the Jetson images.
+  publish:
+    needs: [list, version]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.list.outputs.images) }}
+    permissions:
+      contents: write # the release and its tag
+      packages: write # the image
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: version-${{ matrix.image }}
+          path: version
+
+      - id: version
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          {
+            echo "has-changes=$(cat "version/$IMAGE/has-changes")"
+            echo "version=$(cat "version/$IMAGE/version")"
+            echo "tag=$(cat "version/$IMAGE/tag")"
+          } >> "$GITHUB_OUTPUT"
+
+      - if: steps.version.outputs.has-changes == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+
+      - if: steps.version.outputs.has-changes == 'true'
+        name: Log in to ghcr.io
+        env:
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+
+      - if: steps.version.outputs.has-changes == 'true'
+        id: publish
+        working-directory: src
+        env:
+          IMAGE: ${{ matrix.image }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make "publish-$IMAGE" VERSION="$VERSION"
+
+      - if: steps.publish.outputs.digest != ''
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/xoadev/nanobrain/${{ matrix.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      # Only once the image is pushed: the tag says the version exists.
+      - if: steps.publish.outputs.digest != ''
+        name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "$TAG is already released"
+            exit 0
+          fi
+          {
+            printf 'ghcr.io/xoadev/nanobrain/%s:%s@%s\n\n' "$IMAGE" "$VERSION" "$DIGEST"
+            cat "version/$IMAGE/changelog"
+          } > notes.md
+          gh release create "$TAG" --target "$GITHUB_SHA" --latest=false \
+            --title "$IMAGE $VERSION" --notes-file notes.md
