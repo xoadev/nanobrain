@@ -2,8 +2,9 @@
 
 The candidate is **Qwen3.5 4B** (`qwen3.5:4b` in Ollama): of the models that fit next to Whisper in
 the Jetson's 8 GB, it is the only one that sees images, calls tools and scores well at controlling
-Home Assistant. **It has not been measured on the Jetson yet**: this article says why it was picked
-and how it will be measured, and its results table fills in when it is.
+Home Assistant. **A first try on a Jetson shared with other services did not fit on the GPU**; on
+a Jetson running only NanoBrain it is still to be measured. This article says why it was picked, how
+it is measured and what came out.
 
 ## One model for talking and seeing
 
@@ -97,6 +98,30 @@ jq -n --arg image "$(base64 -w0 snapshot.jpg)" '{model: "qwen3.5:4b", stream: fa
 **Memory**: `ollama ps` for the model, and the Jetson's free memory with both running.
 
 ## Results
+
+### First try: a Jetson that also runs other services
+
+**It did not fit on the GPU.** Measured on 2026-11-07 on a Jetson Orin Nano Super 8 GB, L4T R36.4.7,
+Ollama 0.40.6 with `JETSON_JETPACK=6`, `qwen3.5:4b` (Q4_K_M, 3.32 GB on disk), thinking off. The
+Jetson ran Whisper on the GPU and Piper next to a photo library's machine learning, a network
+controller and two agents, which is not a NanoBrain of its own.
+
+| Free memory before loading | Context | Where the model ran | Reading the prompt | Writing |
+| --- | --- | --- | --- | --- |
+| 2,778 MiB | 4,096 or more | Did not load: `cudaMalloc failed: out of memory` | | |
+| 2,778 MiB | 2,048 | 0.72 of 3.39 GiB on the GPU | 25.6 tok/s | 5.6 tok/s |
+| 4,212 MiB | 8,192 | 2.1 of 5.37 GiB on the GPU | 32.1 tok/s | 7.0 tok/s |
+
+Speeds from the second run of `ollama run --verbose` with "Turn on the kitchen light"; the first run
+spent 35 to 45 s loading the model. Nothing was killed for lack of memory: Ollama put on the CPU
+what did not fit on the GPU, and Whisper kept working.
+
+What it means: at 32 tok/s, reading a 3,000-token Assist prompt alone takes over a minute and a
+half. A model that spills to the CPU is no use for voice. On a Jetson shared with other services,
+a 4B multimodal model with an 8K context needs more memory than it has, so no Home Assistant orders
+or image questions were run.
+
+### On a Jetson running only NanoBrain
 
 | Measure | Qwen3.5 4B |
 | --- | --- |
