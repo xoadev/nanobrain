@@ -1,3 +1,6 @@
 [files]
 # Locks: their hashes are not words.
 extend-exclude = ["*requirements.txt"]
+
+[default.extend-words]
+hass = "hass" # Home Assistant's short name: HassTurnOn, llm_hass_api
