@@ -1,0 +1,32 @@
+# A squash merge makes the pull request's title the commit on main, and convco reads that commit to
+# version the images: the title has to be a Conventional Commit.
+name: pr-title
+
+on:
+  pull_request:
+    branches: [main]
+    # edited: a new title changes the squash commit that lands on main.
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The action needs the history to run; running it installs convco, checked against its sha256.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: xoadev/convco-version@e8cf4f03b64bbbb8b2e10cecdab9c99ada457e9c # v1.1.0
+      - name: Check the pull request's title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | convco check --from-stdin
