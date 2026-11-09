@@ -34,8 +34,9 @@ updates:
       include: scope
 
   - package-ecosystem: pip
+    # One line per image: a glob also made a duplicate update for /images itself.
     directories:
-      - /images/*
+      - /images/wyoming-whisper-gpu
     schedule:
       interval: weekly
     cooldown:
@@ -47,3 +48,5 @@ updates:
       # av 19 dropped an argument faster-whisper 1.2.1 passes to av.open; 17 is the one tried since.
       - dependency-name: av
         versions: [">=18"]
+      # CTranslate2 pins the pybind11 it builds with (python/install_requirements.txt): it moves with it.
+      - dependency-name: pybind11
