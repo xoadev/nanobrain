@@ -35,7 +35,7 @@ Each piece speaks a standard protocol, so any of them can be swapped without tou
 | --- | --- | --- |
 | Hear (speech to text) | Whisper on the GPU, Wyoming server | [`wyoming-whisper-gpu`](images/wyoming-whisper-gpu/), built here |
 | Speak (text to speech) | Piper, Wyoming server | The official `rhasspy/wyoming-piper` image, on the CPU |
-| Understand and order | A local LLM in Ollama, as Assist's conversation agent | The official Ollama image with [Qwen3.5 4B](docs/choosing-the-llm.md), still to be measured |
+| Understand and order | A local LLM in Ollama, as Assist's conversation agent | The official Ollama image with [Qwen3.5](docs/choosing-the-llm.md): 2B at 4 bits on a shared Jetson |
 | See | The same model, through Home Assistant's AI Task | Still to be measured |
 
 An image is built here only when no maintained one serves the Jetson. Ollama and Piper already
@@ -43,8 +43,8 @@ publish theirs, so NanoBrain documents how to use them instead of rebuilding the
 
 ## Try it
 
-[`examples/compose.yaml`](examples/compose.yaml) runs the three pieces on the Jetson; its header
-says what to add in Home Assistant.
+[`examples/compose.yaml`](examples/compose.yaml) runs the three pieces on the Jetson. Set
+`WHISPER_GPU_VERSION` to a release first; the file's header says what to add in Home Assistant.
 
 ## Hardware
 

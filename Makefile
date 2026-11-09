@@ -42,7 +42,7 @@ endif
 
 LINTERS = $(BIN)/hadolint $(BIN)/shellcheck $(BIN)/actionlint $(BIN)/rumdl $(BIN)/typos $(BIN)/ruff
 
-.PHONY: help lint format test changed-images agents-sync agents-check
+.PHONY: help lint format test release changed-images agents-sync agents-check
 
 help: ## List the targets
 	@grep -hE '^[a-z%-]+:.*## ' $(MAKEFILE_LIST) | sed 's/:.*## /\t/' | sort
@@ -80,6 +80,9 @@ publish-%: ## Build, check and push images/<name> as VERSION=X.Y.Z, unless that 
 	  $(MAKE) --no-print-directory image-$* && docker tag $(REGISTRY)/$*:check "$$tag" && docker push "$$tag" || exit 1; \
 	fi; \
 	echo "digest=$$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$$tag")" >> "$${GITHUB_OUTPUT:-/dev/stdout}"
+
+release: ## Run the release workflow on main: every image with changes, or IMAGE=<name>
+	gh workflow run release.yaml --ref main -f image="$(IMAGE)"
 
 changed-images: ## The images whose folder differs from BASE, one per line
 	@git diff --name-only $(BASE)...HEAD -- images/ | cut -d/ -f2 | sort -u | while read -r image; do \
