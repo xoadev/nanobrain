@@ -43,8 +43,8 @@ publish theirs, so NanoBrain documents how to use them instead of rebuilding the
 
 ## Try it
 
-[`examples/compose.yaml`](examples/compose.yaml) runs the three pieces on the Jetson; its header
-says what to add in Home Assistant.
+[`examples/compose.yaml`](examples/compose.yaml) runs the three pieces on the Jetson. Set
+`WHISPER_GPU_VERSION` to a release first; the file's header says what to add in Home Assistant.
 
 ## Hardware
 

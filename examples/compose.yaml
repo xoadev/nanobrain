@@ -1,5 +1,7 @@
 # The whole NanoBrain stack on a Jetson Orin Nano, for any Home Assistant to reach over the network.
-# `docker compose up -d` here, then add in Home Assistant:
+# Pick the Whisper image's version from https://github.com/xoadev/nanobrain/releases and set it, in
+# the environment or a .env file next to this one: WHISPER_GPU_VERSION=X.Y.Z. Then
+# `docker compose up -d` here, and add in Home Assistant:
 #   - Wyoming Protocol, host the Jetson, port 10300: speech to text.
 #   - Wyoming Protocol, host the Jetson, port 10200: text to speech.
 #   - Ollama, URL http://<jetson>:11434, model qwen3.5:4b: the conversation agent and the AI Task.
@@ -7,9 +9,10 @@
 name: nanobrain
 
 services:
-  # Speech to text on the GPU, built by this repository. Dependabot moves the tag with each release.
+  # Speech to text on the GPU, built by this repository. A tag is never rewritten, so the version
+  # you set is always the same image until you change it.
   wyoming-whisper-gpu:
-    image: ghcr.io/xoadev/nanobrain/wyoming-whisper-gpu:0.1.0
+    image: ghcr.io/xoadev/nanobrain/wyoming-whisper-gpu:${WHISPER_GPU_VERSION:?set it to a release from https://github.com/xoadev/nanobrain/releases}
     # int8_float16 keeps the int8 model in int8 on CUDA: without it, twice the memory.
     command: ["--model", "small-int8", "--language", "en", "--compute-type", "int8_float16"]
     volumes:
