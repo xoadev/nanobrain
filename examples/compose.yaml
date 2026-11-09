@@ -7,7 +7,7 @@
 name: nanobrain
 
 services:
-  # Speech to text on the GPU, built by this repository. Pin it by the digest its release gives.
+  # Speech to text on the GPU, built by this repository. Dependabot moves the tag with each release.
   wyoming-whisper-gpu:
     image: ghcr.io/xoadev/nanobrain/wyoming-whisper-gpu:0.1.0
     # int8_float16 keeps the int8 model in int8 on CUDA: without it, twice the memory.
