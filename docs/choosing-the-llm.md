@@ -1,10 +1,11 @@
 # Choosing the LLM of the house
 
-The candidate is **Qwen3.5 4B** (`qwen3.5:4b` in Ollama): of the models that fit next to Whisper in
-the Jetson's 8 GB, it is the only one that sees images, calls tools and scores well at controlling
-Home Assistant. **A first try on a Jetson shared with other services did not fit on the GPU**; on
-a Jetson running only NanoBrain it is still to be measured. This article says why it was picked, how
-it is measured and what came out.
+**On a Jetson that also runs other services, Qwen3.5 2B at 4 bits, forced whole onto the GPU,
+answers a 2,500-token prompt in 3 s.** Qwen3.5 4B (`qwen3.5:4b`) scores better at controlling Home
+Assistant, but it did not fit on that Jetson's GPU; on one running only NanoBrain it is still to be
+measured. Both see images and call tools, and their accuracy in Home Assistant through Ollama is
+still to be measured. This article says why they were picked, how they are measured and what came
+out.
 
 ## One model for talking and seeing
 
@@ -143,6 +144,37 @@ thinking off, nothing else busy.
 - **Ollama splits the model between GPU and CPU by what it sees free, and it is cautious.** With
   2.9 GB free it put only 1 GiB of a 4.7 GiB load on the GPU. A layer on the CPU slows the whole
   model down to CPU speed.
+
+### Third try: Qwen3.5 2B at 4 bits, forced onto the GPU
+
+**It fits whole on the GPU and is fast enough for voice.** Measured on 2026-11-09, same Jetson and
+Ollama, `qwen3.5:2b-q4_K_M` with `num_ctx` 8192, thinking off and `num_gpu` 99: the option that
+tells Ollama how many layers to put on the GPU, here all of them, instead of its cautious guess.
+
+| Measure | Value |
+| --- | --- |
+| Where the model ran | 1,380 MiB, all of it on the GPU |
+| First load | Failed once (`cudaMalloc failed: out of memory`); the next request loaded it in 13.5 s |
+| "Turn on the kitchen light", loaded | Prompt 163.8 tok/s, writing 24.0 tok/s, 2.5 s for 56 tokens |
+| A 2,519-token prompt, 20 tokens out | Prompt 1,154 tok/s, 3.0 s in all |
+| `MemAvailable` before / loaded / after unloading | 2,996 / 462 / 3,333 MiB |
+
+Fully on the GPU, reading the prompt goes from 40 to over 1,000 tok/s: an Assist prompt takes
+seconds, not a minute. Two things to watch:
+
+- **Memory gets tight.** With the model loaded, Ollama's container took 2.74 GiB for a 1.38 GiB
+  model, likely because the weights stay mapped from disk in the page cache and are also copied to
+  the GPU, in the same RAM. Ollama's `use_mmap` option set to false may halve it; not tried yet.
+- **The first load may fail** while free memory sits in the page cache. Load it once at boot and
+  keep it loaded.
+
+Home Assistant's Ollama integration has no `num_gpu` setting, so the option goes into a model of
+your own, which Home Assistant then names like any other (not tried yet):
+
+```sh
+printf 'FROM qwen3.5:2b-q4_K_M\nPARAMETER num_gpu 99\nPARAMETER num_ctx 8192\n' > Modelfile
+ollama create qwen3.5-2b-gpu -f Modelfile
+```
 
 #### Where an Orin Nano's memory goes
 

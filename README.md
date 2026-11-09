@@ -35,7 +35,7 @@ Each piece speaks a standard protocol, so any of them can be swapped without tou
 | --- | --- | --- |
 | Hear (speech to text) | Whisper on the GPU, Wyoming server | [`wyoming-whisper-gpu`](images/wyoming-whisper-gpu/), built here |
 | Speak (text to speech) | Piper, Wyoming server | The official `rhasspy/wyoming-piper` image, on the CPU |
-| Understand and order | A local LLM in Ollama, as Assist's conversation agent | The official Ollama image with [Qwen3.5 4B](docs/choosing-the-llm.md), still to be measured |
+| Understand and order | A local LLM in Ollama, as Assist's conversation agent | The official Ollama image with [Qwen3.5](docs/choosing-the-llm.md): 2B at 4 bits on a shared Jetson |
 | See | The same model, through Home Assistant's AI Task | Still to be measured |
 
 An image is built here only when no maintained one serves the Jetson. Ollama and Piper already
