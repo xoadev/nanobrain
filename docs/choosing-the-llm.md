@@ -121,6 +121,29 @@ half. A model that spills to the CPU is no use for voice. On a Jetson shared wit
 a 4B multimodal model with an 8K context needs more memory than it has, so no Home Assistant orders
 or image questions were run.
 
+### Second try: Qwen3.5 2B on the same Jetson
+
+**It loaded only after dropping the page cache, and still ran mostly on the CPU.** Measured on
+2026-11-09, same Jetson and Ollama, `qwen3.5:2b` (Ollama's default tag, Q8_0, 2.68 GB on disk),
+thinking off, nothing else busy.
+
+| Free memory before loading (`MemFree` / `MemAvailable`) | Context | Where the model ran | Reading the prompt | Writing |
+| --- | --- | --- | --- | --- |
+| 808 / 3,614 MiB | 2,048 to 8,192 | Did not load: `cudaMalloc failed: out of memory` | | |
+| 2,930 / 3,269 MiB, after dropping the page cache | 8,192 | 1.0 of 4.7 GiB on the GPU | 39.6 tok/s | 7.1 tok/s |
+
+#### Two lessons on loading a model on a Jetson
+
+- **What counts is free memory, not available memory.** Linux calls page cache "available"
+  because it can drop it whenever it likes, but CUDA on a Jetson did not get it back: with 3.6 GB
+  available and 0.8 GB free, nothing loaded. Dropping the cache (`sync; echo 3 >
+  /proc/sys/vm/drop_caches`) turned "won't load" into "loads". So load the model once, right after
+  boot, while memory is free, and keep it loaded: Home Assistant's `keep_alive` already does the
+  second half.
+- **Ollama splits the model between GPU and CPU by what it sees free, and it is cautious.** With
+  2.9 GB free it put only 1 GiB of a 4.7 GiB load on the GPU. A layer on the CPU slows the whole
+  model down to CPU speed.
+
 #### Where an Orin Nano's memory goes
 
 The containers on that Jetson added up to about 1.3 GB of RAM, yet only 4.4 GB of 7.6 were
