@@ -170,7 +170,7 @@ README or an article knowing **why** each decision was taken, not only what to t
 - One folder per image in `images/<name>/`: `Dockerfile`, its locks, `check.py` and `README.md`.
 - **Each image has its own version, from convco**: the conventional commits that touched
   `images/<name>/` since its last tag `<name>-vX.Y.Z` say the next one (`feat` minor, `fix` patch,
-  `!` major). Merged to `main`, `release.yaml` publishes it to
+  `!` major). Run by hand from `main`, `release.yaml` publishes it to
   `ghcr.io/xoadev/nanobrain/<name>:X.Y.Z` and makes the release with its changelog; a published tag
   is never rewritten. So the pull request's title, the squash commit, is what versions the image:
   `fix(wyoming-whisper-gpu): …` for a new lock, `feat(…)` for a new capability, and a type that does
