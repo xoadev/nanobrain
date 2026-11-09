@@ -4,3 +4,4 @@ extend-exclude = ["*requirements.txt"]
 
 [default.extend-words]
 hass = "hass" # Home Assistant's short name: HassTurnOn, llm_hass_api
+hace = "hace" # Spanish, in the orders quoted as they were spoken

@@ -163,18 +163,46 @@ Fully on the GPU, reading the prompt goes from 40 to over 1,000 tok/s: an Assist
 seconds, not a minute. Two things to watch:
 
 - **Memory gets tight.** With the model loaded, Ollama's container took 2.74 GiB for a 1.38 GiB
-  model, likely because the weights stay mapped from disk in the page cache and are also copied to
-  the GPU, in the same RAM. Ollama's `use_mmap` option set to false may halve it; not tried yet.
+  model. Ollama's `use_mmap` option set to false changed nothing.
 - **The first load may fail** while free memory sits in the page cache. Load it once at boot and
   keep it loaded.
 
 Home Assistant's Ollama integration has no `num_gpu` setting, so the option goes into a model of
-your own, which Home Assistant then names like any other (not tried yet):
+your own:
 
 ```sh
 printf 'FROM qwen3.5:2b-q4_K_M\nPARAMETER num_gpu 99\nPARAMETER num_ctx 8192\n' > Modelfile
 ollama create qwen3.5-2b-gpu -f Modelfile
 ```
+
+Home Assistant takes it only by its full name, `qwen3.5-2b-gpu:latest`: without the tag it tries to
+download it. Keep only one name loaded: Ollama loads a second copy of the same weights under
+another name, and the GPU runs out of memory.
+
+### Fourth try: Qwen3.5 2B as Home Assistant's conversation agent
+
+**Fast, but not reliable: two orders out of six right.** Measured on 2026-11-09 on the same Jetson,
+with the model above as a second Ollama conversation agent, the Assist API on and thinking off. Home
+Assistant exposed 146 entities, and the orders went straight to the agent through
+`conversation.process`.
+
+| Order | Result |
+| --- | --- |
+| "Enciende la luz de la lavandería" (twice) | Wrong: called no tool, said the light did not exist |
+| "Turn on the laundry light" | Right |
+| "¿Qué temperatura hace en el salón?" | Right |
+| "¿Está abierta la puerta del frigorífico?" | Wrong: said open, naming a sensor that does not exist |
+| "Enciende eso" | Right: asked which device, but in English |
+| "Apaga la luz de la lavandería" | Failed: called tools in a loop until Home Assistant gave up after 30 s |
+
+Each call to the model took about 2 s, so speed is no longer the problem. The test was harder than a
+house would make it, three ways:
+
+- **146 exposed entities**, against the fewer than 25 Home Assistant recommends for local models. A
+  2B model gets lost in a prompt that long.
+- **Straight to the model.** In a voice pipeline with "prefer handling commands locally", Assist
+  answers "turn on the laundry light" itself and the LLM never sees it.
+- **No language set.** Without an instruction to answer in Spanish, it answered in English.
 
 #### Where an Orin Nano's memory goes
 
