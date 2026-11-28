@@ -42,7 +42,7 @@ services:
   # it only has to be told the JetPack, which it cannot detect. Pull the model once:
   # `docker compose exec ollama ollama pull qwen3.5:4b`.
   ollama:
-    image: ollama/ollama:0.40.13@sha256:b2f0122c476bc9fe7ce679d8bb4bd555351e25e2554eefb156f61cb0a89cf429
+    image: ollama/ollama:0.40.17@sha256:ccc42bcd3d5fcf7ab0d532b300382154e1a4da56fc666bdb313b78ebdd912754
     environment:
       JETSON_JETPACK: "6"
     volumes:
