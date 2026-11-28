@@ -273,6 +273,6 @@ typing-extensions==4.16.0 \
 wyoming==1.10.2 \
     --hash=sha256:08aec17ccad4d72fc3f919ab741beacf3f23a1df24c8b9a317ebc6e02d2b227c \
     --hash=sha256:2a84035d9e51f4be68b27c9791273c5bce29f79f0c37137ea49cc417294f9080
-wyoming-faster-whisper==3.8.1 \
+wyoming-faster-whisper==3.9.1 \
     --hash=sha256:2c7e668f89ab726e9c93b7eeb4d8b93471e4eda84f3834505e50b30a82ae9e8e \
     --hash=sha256:cebc0ab87fe72364fc7f804e9185cc5666cf6e261e7a14f201e10c98d0fdceb9
