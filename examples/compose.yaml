@@ -30,7 +30,7 @@ services:
 
   # Text to speech on the CPU: Piper is fast enough there, and the GPU stays for the other two.
   wyoming-piper:
-    image: rhasspy/wyoming-piper:2.5.2@sha256:7d39aafac409c2b6b09d999ed04d84c311d632e558b35baa60fad6aac722af7a
+    image: rhasspy/wyoming-piper:2.5.4@sha256:333622ab9e4bcd00c80a37219b90a1a9d6aa3fd1ad34e0a6e3bddd36ee999efd
     command: ["--voice", "en_US-lessac-medium"]
     volumes:
       - piper-voices:/data
